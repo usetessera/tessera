@@ -4,7 +4,7 @@
 
 Every folder in your codebase is an architectural element. Every folder contains an `architecture.md` describing what it is, what depends on it, and why. Your architecture lives beside your code, in git, updated in the same pull request as the change itself. It can never drift.
 
-Tessera is a **free, open specification** — like the [C4 model](https://c4model.com/). You don't need special tools to adopt it. A text editor is enough. Optional tooling (an [MCP server](https://github.com/usetessera) and a [VS Code extension](https://github.com/usetessera)) exists to make the workflow delightful, but the framework stands on its own.
+Tessera is a **free, open specification** — like the [C4 model](https://c4model.com/). You don't need special tools to adopt it. A text editor is enough. Optional tooling (an [MCP server](https://github.com/usetessera) and a [VS Code extension](https://github.com/usetessera)) exists to make the workflow delightful, but the framework stands on its own. (The MCP and VS Code extension are still under development)
 
 ## Why
 
@@ -68,7 +68,7 @@ You can adopt Tessera with nothing but a text editor. If you want more:
 - **Tessera MCP server** (`@tessera/mcp`) — lets AI coding agents (Claude Code, Cursor, etc.) read and maintain your architecture tree automatically. Free, open source, MIT.
 - **Tessera VS Code extension** — interactive canvas over your architecture tree. Free tier for read/navigate; Pro tier for editing, diagrams, and export.
 
-Both are separate projects and strictly optional. The spec is the product.
+Both are separate projects and strictly optional. The spec is the product. They are also still under development. To be released soon
 
 ## Contributing
 
