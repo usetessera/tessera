@@ -14,28 +14,99 @@ This gives you three properties for free:
 2. **Single source of truth** — the folder tree can't disagree with itself.
 3. **Tool-independence** — any text editor is a valid authoring environment.
 
-## 2. The four layers
+## 2. The layers
 
-Tessera borrows C4's four-level hierarchy and binds each level to a concrete filesystem rule.
+Tessera borrows C4's hierarchy and binds each level to a concrete filesystem rule. A single-system repo uses four layers (L1 through L4). A **multi-system monorepo** can opt into a fifth, L0 "Landscape", which represents the whole workspace of systems.
 
 | Level | Name | Folder rule | What it represents |
 |---|---|---|---|
-| L1 | **Context** | The repo root | The whole system and its external world |
-| L2 | **Container** | Top-level folders under root | Deployable/distinct units (services, apps, databases) |
+| L0 | **Landscape** | The repo root, in `landscape` workspace mode only | A workspace of multiple software systems (monorepo root) |
+| L1 | **Context** | The repo root (default mode), or a top-level folder in landscape mode | A single software system and its external world |
+| L2 | **Container** | Top-level folders under a Context | Deployable/distinct units (services, apps, databases) |
 | L3 | **Component** | Folders inside containers | Logical groupings within a container |
 | L4 | **Module** | Leaf folders (no subfolders) | Atomic code units — only files live here |
 
-A project with more than four levels of depth still only has four architectural layers. Extra depth collapses via the **pass-through rule** (§4).
+L0 is **opt-in** via `workspace_mode: landscape` in `.tessera/config.yaml` (see §2.2). The default is `context`, which preserves the single-system model — existing repos are unaffected.
+
+A project with more than the configured number of levels of depth still only has those architectural layers. Extra depth collapses via the **pass-through rule** (§4).
+
+### 2.1 What lives at each layer
+
+Only **Modules** hold code. The organizational layers (Landscape, Context, Container, Component) hold `architecture.md` and subfolders — nothing else that's load-bearing.
+
+| Layer | `architecture.md` | Subfolders | Code files | Config files |
+|---|---|---|---|---|
+| L0 Landscape | Required (at monorepo root) | Yes (Contexts and pass-through) | No | Repo-level config OK (`.gitignore`, `package.json`, `tsconfig.json`, workspace manifests) |
+| L1 Context | Required (at repo root in default mode; at system root in landscape mode) | Yes (Containers and pass-through) | No | Repo- or system-level config OK |
+| L2 Container | Required | Yes (Components and pass-through) | No | Container-level config OK (`Dockerfile`, `package.json`, build configs) |
+| L3 Component | Required | Yes (Modules or sub-Components) | No | Rarely — move them into a child Module if they describe code |
+| L4 Module | Required | **No** | Yes | Yes |
+
+If a Component accumulates code files directly (`index.ts`, `handler.go`), that's a signal it should become a Module, or those files belong in a child Module. The rule is not arbitrary: it keeps drill-down predictable — when you see a Module, you know you've reached the code.
+
+### 2.2 Workspace modes: `context` vs `landscape`
+
+Tessera has two workspace modes. Both use the same layers — they differ only in where the hierarchy starts.
+
+- **`context` (default).** The repo root is an L1 Context. A single software system. This is what v1.0 always assumed and remains the right choice for most repositories. No config change needed — the default is implicit.
+- **`landscape`.** The repo root is an L0 Landscape. Top-level folders that have `architecture.md` are L1 Contexts (independent software systems within the workspace). Use this for monorepos that host multiple products/systems.
+
+To enable landscape mode, set `workspace_mode: landscape` in `.tessera/config.yaml`:
+
+```yaml
+# .tessera/config.yaml
+workspace_mode: landscape
+ignore:
+  - node_modules
+  - dist
+```
+
+The root `architecture.md` should then describe the landscape as a whole (what systems live here, what binds them together) and list the systems. Each top-level system folder gets its own `architecture.md` as an L1 Context.
+
+**When to choose landscape:**
+- Your repo has multiple independently-deployed products (e.g., backend + desktop + mobile + marketing site).
+- You need to show cross-system relationships (which systems talk to which) in one visualization.
+- The top-level folders *are* systems, not containers within one system.
+
+**When to stay in context mode:**
+- Your repo is a single system. Most repos are.
+- Your top-level folders are runtime units of one system (e.g., `backend/` + `frontend/` that ship together as one product). Use Containers, not Contexts.
+- You're unsure. Start in `context`; switch to `landscape` later if the modeling doesn't fit. The switch is a config edit plus root `architecture.md` rewrite — no file moves required.
+
+See ADR-014 for the rationale and the alternatives that were considered.
 
 ## 3. Detection rules
 
 Given a folder, its layer is determined as follows:
 
-1. If the folder is the repo root → **Context**.
+1. If the folder is the repo root → **Landscape** if `workspace_mode` is `landscape`, otherwise **Context**. (The root is always the top of the hierarchy, even if it contains only files — see §3.1.)
 2. Else if the folder contains only files (no subfolders) → **Module**.
 3. Else its layer is one level below its parent's layer.
 
-A folder with subfolders is a *parent* element (Context, Container, or Component). A folder with only files is a *leaf* (Module).
+A folder with subfolders is a *parent* element (Landscape, Context, Container, or Component). A folder with only files is a *leaf* (Module).
+
+The depth→layer mapping for non-root folders depends on the workspace mode:
+
+| Depth from root | `context` mode | `landscape` mode |
+|---|---|---|
+| 0 (root) | Context | Landscape |
+| 1 | Container | Context |
+| 2 | Component | Container |
+| 3 | Module | Component |
+| 4 | — | Module |
+
+In both modes, a leaf folder (no subfolders) is a Module regardless of depth.
+
+### 3.1 The flat-repo edge case
+
+A repository with no subfolders — only source files at the root — is still an L1 Context (or an L0 Landscape, if you configured landscape mode). The root is never demoted to a Module, because the root represents the top of the architecture and cannot exist at the leaf layer by definition.
+
+In practice, a truly flat repo is rare. If your project is a handful of scripts or a single-module library, you have two options:
+
+- **Stay flat.** Write one `architecture.md` at the root (Context) and list the files under an optional `## Files` section, as you would for a Module. The L4 template is permitted at L1 for single-file-layer projects. This is the pragmatic choice for small libraries.
+- **Introduce one Container.** Create a single top-level folder (e.g., `app/`, `src/app/`) and move your files under it. Root becomes Context, the new folder becomes a Container-or-Module. Do this only when the project grows or you anticipate more than one deployable unit.
+
+The uniform children rule (§5) does not apply to flat-repo roots because a root with no subfolders has no architectural children to unify.
 
 ## 4. The pass-through rule
 
@@ -80,7 +151,39 @@ This is the only structural constraint Tessera places on your code.
 
 Each layer has a template. Use it. Keeping the format uniform makes the tree easy for humans and AI agents to read.
 
-### 7.1 L1 Context (repo root)
+### 7.0 L0 Landscape (monorepo root, `landscape` mode only)
+
+```markdown
+# [Workspace Name]
+
+## Overview
+What this system landscape is — the portfolio of software systems that live
+in this workspace, and what binds them together (shared users, shared data
+boundaries, shared deployment pipeline, etc.).
+
+## Systems
+- **[System Name]**: One-line description of what it does
+- **[System Name]**: One-line description of what it does
+
+## External Systems
+- **[External System]**: How the landscape interacts with it
+
+## Actors
+- **[Actor Name]**: Which systems they interact with, and how
+
+## Metadata
+- **Layer**: Landscape
+- **Tags**: [tags]
+- **Owner**: @username
+- **Status**: Active | Planned | Deprecated
+
+## Key Decisions
+- [Decision and rationale — include ADR links where they exist]
+```
+
+Only use this template at the repo root when `workspace_mode: landscape` is set in `.tessera/config.yaml`. In the default `context` mode the repo root uses the L1 Context template below.
+
+### 7.1 L1 Context (repo root in default mode; system root in landscape mode)
 
 ```markdown
 # [System Name]
@@ -203,6 +306,20 @@ Example:
 - **Depended by**: [../api/architecture.md](../api/architecture.md)
 ```
 
+### 8.1 Keeping the graph consistent
+
+Bilateral maintenance is the framework's weak point: if one side updates and the other forgets, the graph drifts. Three ways to prevent that:
+
+1. **Automate it.** If you use the Tessera MCP server, `update_element` can auto-heal the reverse link when you add or remove a dependency. Prefer this over manual edits in any non-trivial project.
+2. **Validate on commit.** Add a pre-commit hook that runs a link-consistency check. The Tessera MCP's `check_links` tool does this; without tooling, a simple script that parses `Depends on` and `Depended by` across the tree is ~30 lines. Block commits that leave the graph inconsistent.
+3. **Validate in CI.** Same check, run on every pull request. Fail the build on drift. This is the minimum for teams — individual discipline erodes; CI doesn't.
+
+List specific targets, not aggregates. `"Depended by: all modules in this container"` is not a valid entry — it cannot be mechanically checked and will decay into a lie. Write out each link.
+
+### 8.2 Cross-cutting dependencies
+
+For an element that almost everything depends on (e.g., a shared `types/` or `constants/` module), listing every dependent is noisy but still preferred. If the `Depended by` list grows past a screen, that's a signal the element is too broad — consider splitting it, or accept the noise in exchange for accuracy. Do not paper over it with "all modules".
+
 ## 9. Maintenance rules
 
 The framework lives or dies on whether `architecture.md` files stay current. Five rules:
@@ -264,7 +381,13 @@ The convention is to maintain an ignore list in `.tessera/config.yaml` at the re
 
 ## 13. Versioning
 
-This is Tessera Spec v1.0. Breaking changes to the spec will be versioned. Implementations should declare which version they target.
+This is Tessera Spec v1.0. The versioning policy:
+
+- **Patch (v1.0.x):** clarifications, typos, new examples. No migration needed.
+- **Minor (v1.x):** new optional template sections, new metadata fields, new layer detection edge cases that don't change the meaning of existing trees. Existing repos stay valid.
+- **Major (v2.0):** changes to the layer model, the pass-through rule, the uniform children rule, or the detection algorithm. A migration note will ship with any v2.0 release describing the conversion from v1 trees.
+
+Implementations should declare which spec version they target. ADR-style tooling (like the Tessera MCP server) should accept a version hint and refuse to operate on trees newer than they understand.
 
 ---
 

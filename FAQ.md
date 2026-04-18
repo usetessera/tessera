@@ -11,6 +11,16 @@ The difference is where the architecture *lives*.
 
 You can absolutely use both. Generate C4 diagrams from a Tessera tree if you want visual output — the semantic model is compatible.
 
+### What Tessera deliberately does *not* cover
+
+C4 is a broader model than Tessera. These are out of scope for the Tessera spec:
+
+- **Dynamic diagrams** (sequence / collaboration). Tessera captures *static* structure. For runtime flows, use Mermaid `sequenceDiagram` or PlantUML and store them alongside the tree — e.g., a `.mermaid.md` file in the relevant Component.
+- **Deployment diagrams** (which container runs where, in which region). The L2 Container template has a `## Deployment` prose field; that's intentional. Topology diagrams are output, not input.
+- **Code-level class diagrams.** ADR-012 adds optional `## Files` / `## Functions` / `## Classes` sections to the Module template, which covers the 80% case. For UML-scale detail, generate from source with an external tool.
+
+Tessera is a spec for the "what exists and how it connects" layer. Everything above (decisions) lives in ADRs; everything below (runtime, deployment, classes) lives in specialized tools. Tessera's job is to make sure those specialized outputs have a stable tree to point at.
+
 ## How is this different from ADRs?
 
 They solve different problems.
@@ -45,6 +55,37 @@ Tessera is language-agnostic and architecture-style-agnostic. If your project ha
 - Monolith vs. microservices vs. modular monolith
 - Package manager or build system
 
+For **monorepos that host multiple independent software systems** (e.g., a backend + desktop + mobile + marketing site all in one repo), see the next question — there's a dedicated mode for that shape.
+
+## My monorepo has multiple products in it — how should I model it?
+
+You have two options:
+
+1. **Single-system mode (default).** Treat the whole repo as one system. Each top-level product folder becomes an L2 Container. This works if the products ship together or are best thought of as pieces of one system.
+2. **Landscape mode.** Treat the repo as an L0 System Landscape — a workspace of multiple software systems. Each top-level product folder becomes its own L1 Context, with its own Containers and Components underneath. Use this when the products are independently deployed and don't share a runtime.
+
+To enable landscape mode, set `workspace_mode: landscape` in `.tessera/config.yaml` and create a root `architecture.md` using the L0 Landscape template (see [SPEC.md §7.0](./SPEC.md#70-l0-landscape-monorepo-root-landscape-mode-only)). The top-level folders then each need their own `architecture.md` as L1 Contexts.
+
+Landscape mode is opt-in. Existing single-system repos are unaffected by the default. See [ADR-014](../adrs/014-landscape-layer.md) for the rationale.
+
+Example folder structure in landscape mode:
+
+```
+my-workspace/                ← L0 Landscape (root architecture.md, config says workspace_mode: landscape)
+├── architecture.md          ← describes the landscape as a whole
+├── .tessera/config.yaml     ← workspace_mode: landscape
+├── api/                     ← L1 Context (a software system)
+│   ├── architecture.md
+│   ├── backend/             ← L2 Container
+│   └── web/                 ← L2 Container
+├── desktop-app/             ← L1 Context (a software system)
+│   ├── architecture.md
+│   └── ...
+└── mobile/                  ← L1 Context (a software system)
+    ├── architecture.md
+    └── ...
+```
+
 ## My repo has `src/`, `lib/`, `pkg/`, `internal/` — how do those fit?
 
 They don't need to. Those are language/framework scaffolding folders, not architectural elements. Don't put `architecture.md` in them. Under the **pass-through rule** ([SPEC.md §4](./SPEC.md#4-the-pass-through-rule)), a folder without an `architecture.md` isn't an architectural element, and its children are promoted to the parent's layer.
@@ -67,13 +108,61 @@ If you find yourself wanting five architectural layers, it's almost always a sig
 
 ## What if I'm adopting this in an existing large repo?
 
-Start at the top and expand incrementally:
+A partial tree is better than no tree. A 40%-covered repo gives you 40% of the value; a 0%-covered repo gives you nothing. Don't treat adoption as a big-bang documentation sprint — it will stall. Use the five-phase playbook below.
 
-1. **Day 1:** Add `architecture.md` at the repo root only (Context layer). Don't try to fill in everything. Even the Context page alone is valuable.
-2. **Week 1:** Add `architecture.md` to each top-level deployable folder (Container layer).
-3. **As you work:** When you open a folder to change something, add or update its `architecture.md` before leaving. Progress comes from the flow of normal work, not a big-bang documentation sprint.
+### Phase 1 — Context only (1–2 hours)
 
-A partial tree is better than no tree. A 40%-covered repo gives you 40% of the value; a 0%-covered repo gives you nothing.
+Write one file: `architecture.md` at the repo root, using the L1 Context template. Cover:
+
+- What the system is and the problem it solves (Overview).
+- External systems it talks to (payment processors, third-party APIs, auth providers).
+- Actors who use it (end users, admins, other services).
+- Top-level `Key Decisions` — three to five, no more.
+
+Do not descend further yet. Commit. Even the Context page alone forces a useful conversation.
+
+### Phase 2 — Containers (half a day)
+
+Identify your deployable or distinct units. These usually map to top-level folders already: `backend/`, `frontend/`, `worker/`, `mobile/`, `cli/`. For each, add an `architecture.md` using the L2 Container template. Cover:
+
+- Runtime and framework.
+- Public API surface (REST endpoints, CLI commands, npm exports — whatever the container exposes).
+- Deployment (where it runs, how it's packaged).
+- Dependencies on other containers.
+
+Update the root `architecture.md` to reference each Container in its `Key Decisions` or by linking.
+
+**Don't create Containers that don't correspond to real deployables.** If `src/`, `lib/`, and `internal/` are technical scaffolding, skip them — the pass-through rule handles them automatically.
+
+### Phase 3 — Components, opportunistically (ongoing)
+
+From here, don't block the team. Add `architecture.md` files to inner folders only as you touch them:
+
+- When you open a folder to change its code, add or update its `architecture.md` before you finish the PR.
+- When you create a new folder for a logical grouping, write its `architecture.md` as part of the same commit.
+- When you onboard someone, have them add an `architecture.md` to the first Component they work on — it's the fastest way to build mental model.
+
+Aim for 40% Component coverage in month one, 80% in month three. Don't chase 100% — the long tail is usually folders that are about to be deleted or merged anyway.
+
+### Phase 4 — Modules and file-level detail (as needed)
+
+Modules (L4) are leaves. Add them when you want AI agents to reason about specific files. The L4 template's optional `## Files` / `## Functions` / `## Classes` sections (per ADR-012) make Modules the unit AI tooling can diff against code to detect drift.
+
+You don't need every Module documented. Start with:
+
+- Modules that are hot paths in code review.
+- Modules that new team members repeatedly get confused by.
+- Modules that AI agents keep miscategorizing.
+
+### Phase 5 — Dependency graph (after the tree is stable)
+
+Only fill in `Depends on` / `Depended by` after the tree has settled. Doing this before the tree is stable means re-editing links every time a folder moves.
+
+When you do fill them in, do it in one sitting per Container: walk the tree, note the imports, write bilateral links. Commit the whole Container's graph in one PR so reviewers can sanity-check it. Then wire up a pre-commit or CI check (see [SPEC.md §8.1](./SPEC.md#81-keeping-the-graph-consistent)) so it stays consistent.
+
+### Using tooling to accelerate adoption
+
+If you use the Tessera MCP server, `scaffold_existing_codebase` proposes a full draft of Phases 2–3 in one pass: it walks your repo, applies the pass-through rule, suggests a layer for each folder, and returns a list of proposed `architecture.md` files. Review the proposal, edit as needed, then apply. You still do Phase 1 (the Context prose) by hand — the tool can't write your system's intent for you. But it collapses days of mechanical work into minutes.
 
 ## How do I handle generated code or vendored dependencies?
 

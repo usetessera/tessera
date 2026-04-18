@@ -1,0 +1,9 @@
+# Monorepo hosting multiple software systems — opt into L0 Landscape.
+# See ADR-014 and SPEC.md §2.2 for the full rules.
+workspace_mode: landscape
+
+ignore:
+  - node_modules
+  - dist
+  - build
+  - .git
