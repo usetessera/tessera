@@ -1,7 +1,7 @@
 # API
 
 ## Overview
-The Acme Vault cloud API. Handles billing (Stripe), user identity lookups
+The Acme Docs cloud API. Handles billing (Stripe), user identity lookups
 (Supabase), and serves the admin dashboard. Deployed to Railway. Stateless
 workers behind a Postgres primary.
 

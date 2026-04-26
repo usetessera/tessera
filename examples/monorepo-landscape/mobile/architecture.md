@@ -1,7 +1,7 @@
 # Mobile
 
 ## Overview
-The Acme Vault mobile companion app. Read-mostly client that browses and
+The Acme Docs mobile companion app. Read-mostly client that browses and
 plays back content synced by the desktop app. Authenticates against the cloud
 API and streams media via presigned B2 URLs.
 

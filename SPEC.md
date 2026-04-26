@@ -1,6 +1,6 @@
 # Tessera Specification
 
-> Version 1.0 · Creative Commons Attribution 4.0
+> Version 1.1 · Creative Commons Attribution 4.0
 
 This document defines the Tessera framework: how to structure a repository so that its folder tree *is* its architectural model, and how to write the `architecture.md` files that live inside it.
 
@@ -32,17 +32,19 @@ A project with more than the configured number of levels of depth still only has
 
 ### 2.1 What lives at each layer
 
-Only **Modules** hold code. The organizational layers (Landscape, Context, Container, Component) hold `architecture.md` and subfolders — nothing else that's load-bearing.
+**Logical code groupings live in Modules.** Modules are where application code belongs — functions, classes, handlers, view components — grouped by concern and documented as a unit. This keeps drill-down predictable: when you see a Module, you know you've reached the code.
 
-| Layer | `architecture.md` | Subfolders | Code files | Config files |
+**Runtime-pinned files may be documented at any layer (ADR-016).** Files whose path is fixed by the runtime or the ecosystem — `package.json`, `CMakeLists.txt`, `tsconfig.json`, root `README.md`, `LICENSE`, Electron `main.js`, Next.js `pages/index.js`, etc. — may be listed in a `## Files` section on the Landscape, Context, Container, or Component whose folder pins them there. This is the exception, not a pattern. Application code still belongs in Modules. See §7.5 for the pinning-rationale convention.
+
+| Layer | `architecture.md` | Subfolders | Application code | Runtime-pinned files |
 |---|---|---|---|---|
-| L0 Landscape | Required (at monorepo root) | Yes (Contexts and pass-through) | No | Repo-level config OK (`.gitignore`, `package.json`, `tsconfig.json`, workspace manifests) |
-| L1 Context | Required (at repo root in default mode; at system root in landscape mode) | Yes (Containers and pass-through) | No | Repo- or system-level config OK |
-| L2 Container | Required | Yes (Components and pass-through) | No | Container-level config OK (`Dockerfile`, `package.json`, build configs) |
-| L3 Component | Required | Yes (Modules or sub-Components) | No | Rarely — move them into a child Module if they describe code |
-| L4 Module | Required | **No** | Yes | Yes |
+| L0 Landscape | Required (at monorepo root) | Yes (Contexts and pass-through) | No | Yes — via `## Files` with rationale |
+| L1 Context | Required (at repo root in default mode; at system root in landscape mode) | Yes (Containers and pass-through) | No | Yes — via `## Files` with rationale |
+| L2 Container | Required | Yes (Components and pass-through) | No | Yes — via `## Files` with rationale |
+| L3 Component | Required | Yes (Modules or sub-Components) | No | Yes — via `## Files` with rationale |
+| L4 Module | Required | **No** | Yes | Yes — description is optional |
 
-If a Component accumulates code files directly (`index.ts`, `handler.go`), that's a signal it should become a Module, or those files belong in a child Module. The rule is not arbitrary: it keeps drill-down predictable — when you see a Module, you know you've reached the code.
+If a Component accumulates *application* code files directly (`index.ts`, `handler.go`) without a pinning reason, that's a signal it should become a Module, or those files belong in a child Module. The `## Files` section at non-Module layers is specifically for files the runtime won't let you move.
 
 ### 2.2 Workspace modes: `context` vs `landscape`
 
@@ -290,6 +292,23 @@ What this module does and why it exists.
 - [Decision and rationale]
 ```
 
+### 7.5 `## Files` at non-Module layers (pinning rationale)
+
+A Landscape, Context, Container, or Component may include an optional `## Files` section listing files physically pinned at that folder's root — files the runtime or ecosystem requires at that exact location. The format matches the Module `## Files` section.
+
+**Each entry at a non-Module layer must include a pinning rationale in its description** — a short "why is this file here?" note. A file without a rationale is surfaced as a soft drift warning by `validate_files` and the drift-tax footer.
+
+```markdown
+## Files
+- `package.json` — npm manifest. Pinned: required at package root by npm.
+- `tsconfig.json` — TypeScript compiler config. Pinned: referenced by `tsc` from project root.
+- `main.js` — Electron main-process entry. Pinned: referenced by `package.json` `"main"` field.
+```
+
+Rationales keep the exception visible. A reader looking at the file list asks "why isn't this in a Module?" and the answer is right there. Without rationales, a non-Module `## Files` section drifts from "runtime-pinned exceptions" toward "a second place to list any file," which defeats the purpose.
+
+If the only thing pinning a file to a non-Module folder is convention you can change — move it into a Module instead. The section is for files the runtime won't let you relocate, not for convenience.
+
 ## 8. Relationships
 
 Dependencies between elements are expressed by **Depends on** and **Depended by** lists in the metadata. Use relative paths to the other element's `architecture.md`.
@@ -381,9 +400,9 @@ The convention is to maintain an ignore list in `.tessera/config.yaml` at the re
 
 ## 13. Versioning
 
-This is Tessera Spec v1.0. The versioning policy:
+This is Tessera Spec v1.1. The versioning policy:
 
-- **Patch (v1.0.x):** clarifications, typos, new examples. No migration needed.
+- **Patch (v1.1.x):** clarifications, typos, new examples. No migration needed.
 - **Minor (v1.x):** new optional template sections, new metadata fields, new layer detection edge cases that don't change the meaning of existing trees. Existing repos stay valid.
 - **Major (v2.0):** changes to the layer model, the pass-through rule, the uniform children rule, or the detection algorithm. A migration note will ship with any v2.0 release describing the conversion from v1 trees.
 

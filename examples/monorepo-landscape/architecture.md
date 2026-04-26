@@ -1,16 +1,16 @@
-# Acme Vault Workspace
+# Acme Docs Workspace
 
 ## Overview
 A monorepo that hosts the three customer-facing software systems for Acme
-Vault: a cloud API that owns billing and shared storage, a desktop application
+Docs: a cloud API that owns billing and shared storage, a desktop application
 that holds the user's files, and a mobile companion app for on-the-go access.
 Systems ship on independent release cycles and own their own data boundaries;
-they share the Acme Vault identity (Supabase JWT) and the Acme Vault storage
+they share the Acme Docs identity (Supabase JWT) and the Acme Docs storage
 bucket conventions, but no code.
 
 ## Systems
 - **API**: Cloud-hosted FastAPI. Owns billing, shared storage routing, and user identity.
-- **Desktop App**: Electron + local FastAPI. Owns the user's on-disk vault and sync state.
+- **Desktop App**: Electron + local FastAPI. Owns the user's on-disk document library and sync state.
 - **Mobile**: React Native companion. Read-mostly client; browses and plays back content synced by the desktop app.
 
 ## External Systems
