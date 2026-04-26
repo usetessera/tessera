@@ -4,7 +4,7 @@
 
 Every folder in your codebase is an architectural element. Every folder contains an `architecture.md` describing what it is, what depends on it, and why. Your architecture lives beside your code, in git, updated in the same pull request as the change itself. It can never drift.
 
-Tessera is a **free, open specification** — like the [C4 model](https://c4model.com/). You don't need special tools to adopt it. A text editor is enough. Optional tooling (an [MCP server](https://github.com/usetessera) and a [VS Code extension](https://github.com/usetessera)) exists to make the workflow delightful, but the framework stands on its own. (The MCP and VS Code extension are still under development)
+Tessera is a **free, open specification** — like the [C4 model](https://c4model.com/). You don't need special tools to adopt it. A text editor is enough. Optional tooling (an [MCP server](https://github.com/usetessera/tessera-mcp) and a [VS Code extension](https://github.com/usetessera)) exists to make the workflow delightful, but the framework stands on its own.
 
 ## Why
 
@@ -13,6 +13,8 @@ Most architecture documentation has the same failure mode: it lives somewhere el
 Tessera fixes this by putting the docs *in the tree, next to the code they describe*. There's nowhere else for them to live. When you rename a folder, you rename the element. When you delete a folder, you delete the element. When you add a function, the sibling `architecture.md` is right there, begging to be updated.
 
 ## The 60-second tour
+
+For a normal single-system repository, the root is an L1 Context:
 
 ```
 my-app/
@@ -34,10 +36,26 @@ my-app/
     └── ...
 ```
 
-Four layers, inspired by C4:
+For a multi-system monorepo, enable `workspace_mode: landscape` and the root becomes an L0 Landscape:
+
+```
+workspace/
+├── .tessera/
+│   └── config.yaml          ← workspace_mode: landscape
+├── architecture.md          ← L0 Landscape (all systems)
+├── api/
+│   └── architecture.md      ← L1 Context (one software system)
+├── desktop-app/
+│   └── architecture.md      ← L1 Context (another software system)
+└── mobile/
+    └── architecture.md      ← L1 Context (another software system)
+```
+
+Four layers by default, with an optional L0 Landscape for monorepos:
 
 | Layer | What it is | Example |
 |---|---|---|
+| **L0 Landscape** | Optional monorepo/workspace of multiple systems | repo root in `landscape` mode |
 | **L1 Context** | The whole system and its outside world | Your app, its users, its external services |
 | **L2 Container** | Deployable/distinct units | `backend/`, `frontend/`, `worker/` |
 | **L3 Component** | Logical groupings inside a container | `api/`, `db/`, `jobs/` |
@@ -47,16 +65,23 @@ That's the whole idea. Everything else is details on how to make it work cleanly
 
 ## Quick start
 
-1. Put an `architecture.md` at your repo root using the **Context** template from [`SPEC.md`](./SPEC.md).
-2. For each top-level folder that represents a distinct deployable unit, add an `architecture.md` using the **Container** template.
-3. Drill down. Add Components and Modules as the tree demands.
-4. Commit. You're done.
+1. Pick a workspace mode:
+   - Use the default **context mode** for one software system.
+   - Use **landscape mode** for a monorepo with multiple independent systems.
+2. Put an `architecture.md` at your root:
+   - Context mode: use the **Context** template.
+   - Landscape mode: set `workspace_mode: landscape` in `.tessera/config.yaml` and use the **Landscape** template.
+3. Add child elements:
+   - Context mode: top-level deployable folders use the **Container** template.
+   - Landscape mode: top-level system folders use the **Context** template.
+4. Drill down. Add Containers, Components, and Modules as the tree demands.
+5. Commit. You're done.
 
 When you change code, update the sibling `architecture.md` in the same commit. That's the entire discipline.
 
 ## What's in this repo
 
-- **[`SPEC.md`](./SPEC.md)** — the full specification: layer rules, templates, edge cases
+- **[`SPEC.md`](./SPEC.md)** — the full v1.1 specification: layer rules, templates, edge cases
 - **[`FAQ.md`](./FAQ.md)** — how Tessera relates to C4, ADRs, Structurizr, and why it exists
 - **[`examples/`](./examples/)** — worked examples at different scales
 - **[`LICENSE`](./LICENSE)** — Creative Commons Attribution 4.0. Use this however you want; just credit the source.
@@ -66,9 +91,9 @@ When you change code, update the sibling `architecture.md` in the same commit. T
 You can adopt Tessera with nothing but a text editor. If you want more:
 
 - **Tessera MCP server** (`@tessera/mcp`) — lets AI coding agents (Claude Code, Cursor, etc.) read and maintain your architecture tree automatically. Free, open source, MIT.
-- **Tessera VS Code extension** — interactive canvas over your architecture tree. Free tier for read/navigate; Pro tier for editing, diagrams, and export.
+- **Tessera VS Code extension** — interactive canvas over your architecture tree. Early Access builds currently unlock all features while the workflow is refined.
 
-Both are separate projects and strictly optional. The spec is the product. They are also still under development. To be released soon
+Both are separate projects and strictly optional. The spec is the product.
 
 ## Contributing
 
