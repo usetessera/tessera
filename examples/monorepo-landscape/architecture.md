@@ -32,3 +32,7 @@ bucket conventions, but no code.
 - Multi-product monorepo; each product releases independently. See ADR-014 (landscape layer) for how this is modeled.
 - Shared auth via Supabase JWTs; no custom identity service per product.
 - No shared code packages at the repo root — each Context is self-contained.
+
+## Files
+- `README.md` — Tutorial walkthrough for the monorepo-landscape example.
+  Pinned at the example root by GitHub conventions.

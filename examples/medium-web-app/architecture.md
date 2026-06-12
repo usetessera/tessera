@@ -20,3 +20,8 @@ A small SaaS for managing widget inventory. Users sign in through the frontend, 
 
 ## Key Decisions
 - Three-container split (frontend / backend / worker) — see [adrs/001-chose-postgres.md](./adrs/001-chose-postgres.md) for the shared-database rationale.
+
+## Files
+- `README.md` — Tutorial walkthrough for the medium-web-app example.
+  Pinned at the example root by GitHub conventions so anyone landing here
+  can follow the example without entering subfolders.

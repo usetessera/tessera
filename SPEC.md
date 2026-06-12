@@ -16,17 +16,17 @@ This gives you three properties for free:
 
 ## 2. The layers
 
-Tessera borrows C4's hierarchy and binds each level to a concrete filesystem rule. A single-system repo uses four layers (L1 through L4). A **multi-system monorepo** can opt into a fifth, L0 "Landscape", which represents the whole workspace of systems.
+Tessera borrows C4's hierarchy and binds each level to a concrete filesystem rule. A single-system repo uses four layers (L1 through L4). A **multi-system monorepo** can opt into a fifth, L0 "Landscape", which represents the whole workspace of systems. A **workspace forest** can opt into `multi-landscape`, where the repository root is a forest index and sibling folders are separate L0 Landscapes.
 
 | Level | Name | Folder rule | What it represents |
 |---|---|---|---|
-| L0 | **Landscape** | The repo root, in `landscape` workspace mode only | A workspace of multiple software systems (monorepo root) |
+| L0 | **Landscape** | The repo root in `landscape` mode, or configured landscape roots in `multi-landscape` mode | A workspace/product-family landscape |
 | L1 | **Context** | The repo root (default mode), or a top-level folder in landscape mode | A single software system and its external world |
 | L2 | **Container** | Top-level folders under a Context | Deployable/distinct units (services, apps, databases) |
 | L3 | **Component** | Folders inside containers | Logical groupings within a container |
 | L4 | **Module** | Leaf folders (no subfolders) | Atomic code units — only files live here |
 
-L0 is **opt-in** via `workspace_mode: landscape` in `.tessera/config.yaml` (see §2.2). The default is `context`, which preserves the single-system model — existing repos are unaffected.
+L0 is **opt-in** via `workspace_mode: landscape` or `workspace_mode: multi-landscape` in `.tessera/config.yaml` (see §2.2). The default is `context`, which preserves the single-system model — existing repos are unaffected.
 
 A project with more than the configured number of levels of depth still only has those architectural layers. Extra depth collapses via the **pass-through rule** (§4).
 
@@ -46,12 +46,13 @@ A project with more than the configured number of levels of depth still only has
 
 If a Component accumulates *application* code files directly (`index.ts`, `handler.go`) without a pinning reason, that's a signal it should become a Module, or those files belong in a child Module. The `## Files` section at non-Module layers is specifically for files the runtime won't let you move.
 
-### 2.2 Workspace modes: `context` vs `landscape`
+### 2.2 Workspace modes: `context`, `landscape`, and `multi-landscape`
 
-Tessera has two workspace modes. Both use the same layers — they differ only in where the hierarchy starts.
+Tessera has three workspace modes. They use the same layers; they differ in where the hierarchy starts.
 
 - **`context` (default).** The repo root is an L1 Context. A single software system. This is what v1.0 always assumed and remains the right choice for most repositories. No config change needed — the default is implicit.
 - **`landscape`.** The repo root is an L0 Landscape. Top-level folders that have `architecture.md` are L1 Contexts (independent software systems within the workspace). Use this for monorepos that host multiple products/systems.
+- **`multi-landscape`.** The repo root is a workspace forest index, not a product element. Configured `landscape_roots` are sibling L0 Landscapes. Use this for repositories that host multiple product families or ecosystems that should be viewed side by side.
 
 To enable landscape mode, set `workspace_mode: landscape` in `.tessera/config.yaml`:
 
@@ -65,23 +66,42 @@ ignore:
 
 The root `architecture.md` should then describe the landscape as a whole (what systems live here, what binds them together) and list the systems. Each top-level system folder gets its own `architecture.md` as an L1 Context.
 
+To enable multi-landscape mode, set `workspace_mode: multi-landscape` and list the L0 landscape roots:
+
+```yaml
+# .tessera/config.yaml
+workspace_mode: multi-landscape
+default_landscape: portal
+landscape_roots:
+  - portal
+  - frameworks
+```
+
+In multi-landscape mode, the root `architecture.md` describes the workspace forest. Each configured landscape root has its own L0 `architecture.md`. Tooling may expose a synthetic root above the landscapes for compatibility with single-tree APIs.
+
 **When to choose landscape:**
 - Your repo has multiple independently-deployed products (e.g., backend + desktop + mobile + marketing site).
 - You need to show cross-system relationships (which systems talk to which) in one visualization.
 - The top-level folders *are* systems, not containers within one system.
+- You have one product family that owns several systems.
+
+**When to choose multi-landscape:**
+- The top-level folders are separate ecosystems or product families.
+- You need to zoom out to compare L0 landscapes, then drill into one.
+- The repository root should not be modeled as a product landscape.
 
 **When to stay in context mode:**
 - Your repo is a single system. Most repos are.
 - Your top-level folders are runtime units of one system (e.g., `backend/` + `frontend/` that ship together as one product). Use Containers, not Contexts.
 - You're unsure. Start in `context`; switch to `landscape` later if the modeling doesn't fit. The switch is a config edit plus root `architecture.md` rewrite — no file moves required.
 
-See ADR-014 for the rationale and the alternatives that were considered.
+See ADR-014 for the landscape rationale and ADR-022 for multi-landscape workspaces.
 
 ## 3. Detection rules
 
 Given a folder, its layer is determined as follows:
 
-1. If the folder is the repo root → **Landscape** if `workspace_mode` is `landscape`, otherwise **Context**. (The root is always the top of the hierarchy, even if it contains only files — see §3.1.)
+1. If the folder is the repo root -> **Landscape** if `workspace_mode` is `landscape`, **synthetic forest root** if `workspace_mode` is `multi-landscape`, otherwise **Context**.
 2. Else if the folder contains only files (no subfolders) → **Module**.
 3. Else its layer is one level below its parent's layer.
 
@@ -89,13 +109,14 @@ A folder with subfolders is a *parent* element (Landscape, Context, Container, o
 
 The depth→layer mapping for non-root folders depends on the workspace mode:
 
-| Depth from root | `context` mode | `landscape` mode |
-|---|---|---|
-| 0 (root) | Context | Landscape |
-| 1 | Container | Context |
-| 2 | Component | Container |
-| 3 | Module | Component |
-| 4 | — | Module |
+| Depth from root | `context` mode | `landscape` mode | `multi-landscape` mode |
+|---|---|---|---|
+| 0 (root) | Context | Landscape | Synthetic forest root |
+| 1 | Container | Context | Landscape |
+| 2 | Component | Container | Context |
+| 3 | Module | Component | Container |
+| 4 | - | Module | Component |
+| 5 | - | - | Module |
 
 In both modes, a leaf folder (no subfolders) is a Module regardless of depth.
 

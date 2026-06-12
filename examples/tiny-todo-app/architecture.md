@@ -18,3 +18,7 @@ A minimal single-user todo application. Stores todos locally in a SQLite file. E
 ## Key Decisions
 - Single-binary Go service chosen for simplicity. See `adrs/001-single-binary.md` (not included in this example).
 - No auth — this is a demo app.
+
+## Files
+- `README.md` — Tutorial walkthrough for the tiny-todo-app example.
+  Pinned at the example root by GitHub conventions.

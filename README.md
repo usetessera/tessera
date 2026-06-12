@@ -39,6 +39,20 @@ my-app/
 For a multi-system monorepo, enable `workspace_mode: landscape` and the root becomes an L0 Landscape:
 
 ```
+
+For a workspace forest, enable `workspace_mode: multi-landscape` and list the
+L0 roots:
+
+```
+workspace/
+├── .tessera/
+│   └── config.yaml          ← workspace_mode: multi-landscape
+├── architecture.md          ← workspace forest index
+├── portal/
+│   └── architecture.md      ← L0 Landscape
+└── frameworks/
+    └── architecture.md      ← L0 Landscape
+```
 workspace/
 ├── .tessera/
 │   └── config.yaml          ← workspace_mode: landscape
@@ -55,7 +69,7 @@ Four layers by default, with an optional L0 Landscape for monorepos:
 
 | Layer | What it is | Example |
 |---|---|---|
-| **L0 Landscape** | Optional monorepo/workspace of multiple systems | repo root in `landscape` mode |
+| **L0 Landscape** | Optional monorepo/workspace of multiple systems, or a configured landscape root | repo root in `landscape` mode; child roots in `multi-landscape` mode |
 | **L1 Context** | The whole system and its outside world | Your app, its users, its external services |
 | **L2 Container** | Deployable/distinct units | `backend/`, `frontend/`, `worker/` |
 | **L3 Component** | Logical groupings inside a container | `api/`, `db/`, `jobs/` |
@@ -68,12 +82,15 @@ That's the whole idea. Everything else is details on how to make it work cleanly
 1. Pick a workspace mode:
    - Use the default **context mode** for one software system.
    - Use **landscape mode** for a monorepo with multiple independent systems.
+   - Use **multi-landscape mode** for a workspace forest with sibling L0 ecosystems.
 2. Put an `architecture.md` at your root:
    - Context mode: use the **Context** template.
    - Landscape mode: set `workspace_mode: landscape` in `.tessera/config.yaml` and use the **Landscape** template.
+   - Multi-landscape mode: set `workspace_mode: multi-landscape`, list `landscape_roots`, and make the root `architecture.md` a forest index.
 3. Add child elements:
    - Context mode: top-level deployable folders use the **Container** template.
    - Landscape mode: top-level system folders use the **Context** template.
+   - Multi-landscape mode: each configured landscape root uses the **Landscape** template.
 4. Drill down. Add Containers, Components, and Modules as the tree demands.
 5. Commit. You're done.
 
