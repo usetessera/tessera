@@ -348,11 +348,11 @@ Example:
 
 ### 8.1 Keeping the graph consistent
 
-Bilateral maintenance is the framework's weak point: if one side updates and the other forgets, the graph drifts. Three ways to prevent that:
+Bilateral maintenance is the framework's weak point: if one side updates and the other forgets, the graph drifts. Three current safeguards are:
 
-1. **Automate it.** If you use the Tessera MCP server, `update_element` can auto-heal the reverse link when you add or remove a dependency. Prefer this over manual edits in any non-trivial project.
-2. **Validate on commit.** Add a pre-commit hook that runs a link-consistency check. The Tessera MCP's `check_links` tool does this; without tooling, a simple script that parses `Depends on` and `Depended by` across the tree is ~30 lines. Block commits that leave the graph inconsistent.
-3. **Validate in CI.** Same check, run on every pull request. Fail the build on drift. This is the minimum for teams — individual discipline erodes; CI doesn't.
+1. **Maintain both documents explicitly.** The MCP `update_element` tool replaces one complete `architecture.md`; it does not auto-heal the reverse link. Review and update the counterpart document in the same change.
+2. **Validate target existence.** The MCP `check_links` tool reports dependency references whose targets do not exist. It does not yet detect a missing reciprocal edge, so a clean result is not proof of bilateral consistency.
+3. **Add reciprocal validation where it is required.** Teams can run a dedicated checker in a pre-commit hook or CI and block changes that leave `Depends on` and `Depended by` asymmetric. Reciprocal-consistency validation remains future Tessera tooling work.
 
 List specific targets, not aggregates. `"Depended by: all modules in this container"` is not a valid entry — it cannot be mechanically checked and will decay into a lie. Write out each link.
 
