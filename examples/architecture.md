@@ -12,7 +12,7 @@ self-contained Tessera workspace.
   the reader at the right one for their project size.
 
 ## Metadata
-- **Layer**: Component
+- **Layer**: Docs
 - **Tags**: [examples, spec, framework]
 - **Depends on**: [framework-spec](../architecture.md)
 - **Depended by**: None

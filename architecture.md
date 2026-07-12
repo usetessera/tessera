@@ -22,7 +22,7 @@ MCP server, and nothing here ships in any compiled output.
   from the MIT-licensed MCP server and the closed-source extension).
 
 ## Metadata
-- **Layer**: Component
+- **Layer**: Docs
 - **Tags**: [spec, framework, public, creative-commons]
 - **Depends on**: None
 - **Depended by**: [examples](./examples/architecture.md)
